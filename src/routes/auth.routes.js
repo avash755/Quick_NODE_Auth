@@ -7,7 +7,9 @@ const {
     sentOTP,
     forgotPassword,
     login,
-    logout
+    logout,
+    tokenCheck,
+    users
 } = require('../controllers/auth.controller');
 const authenticate = require('../middlewares/auth.middleware'); /// Importing authentication middlewares
 
@@ -24,6 +26,8 @@ router.post('/forgot-password', forgotPassword);
 router.post('/login', login);
 router.post('/logout', logout);
 
+router.get('/users', authenticate, users);
 
+router.get('/me', authenticate, tokenCheck);
 
 module.exports = router;

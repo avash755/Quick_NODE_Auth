@@ -49,7 +49,7 @@ async function signup(req, res) {
         /// if user already exists, return an error response
         if(isUserExists){
             return res.status(409).json({
-                message: "User already exists!"
+                message: "username & email already exists!"
             })
         }
 
@@ -230,15 +230,22 @@ async function resendOTP(req, res){
 }
 async function sentOTP(req, res){
     try{
-        const user = req.user;
+        const {email} = req.body;
         
+        /// verify is the email user exist or not?
+        const user = await userModel.findOne({email})
+        if(!user){
+            return res.status(401).json({
+                message: "User don't exist"
+            })
+        }
         /// Generate an OTP and send it to the user's email. 
         const otp = crypto.randomInt(1000000, 9999999).toString();
         const otpHash = await bcrypt.hash(otp, 11);
         const otpExpiry = new Date(Date.now() + 11 * 60 * 1000);
         
         /// Send OTP to the user
-        await sendOtp(user.email, otp) 
+        await sendOtp(email, otp) 
 
         /// update database with the new code
         user.otp = otpHash;
@@ -328,15 +335,11 @@ async function login(req, res){
     try{
         const {username, email, password} = req.body; /// get the data
 
-        /// Normalize the given inputs. 
-        const normalizedUsername = username.trim();
-        const normalizedEmail = email.trim().toLowerCase();
-
         /// Find the user and identify the user Exist or not? 
         const user = await userModel.findOne({
             $or:[
-                {username: normalizedUsername},
-                {email: normalizedEmail}
+                {username},
+                {email}
             ]
         })
         if(!user){ // If user doesn't exist 
@@ -413,6 +416,25 @@ async function logout(req, res){
     })
 }
 
+async function users(req, res){
+    const users = await userModel.find().select("_id username email createdAt");
+
+    return res.status(200).json({
+        message: "all the users: ",
+        users
+    })
+}
+
+async function tokenCheck(req, res){
+  res.status(200).json({
+    user: {
+      username: req.user.username,
+      email: req.user.email
+    }
+  })
+}
+
+
 module.exports = {
     signup,
     verify,
@@ -420,5 +442,7 @@ module.exports = {
     sentOTP,
     forgotPassword,
     login,
-    logout
+    logout,
+    tokenCheck,
+    users
 } 
