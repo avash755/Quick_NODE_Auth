@@ -1,278 +1,152 @@
-# Quick Node Auth
+# Reusable Collection Authentication API
 
-A reusable **Node.js and Express authentication starter** built with MongoDB, Mongoose, JWT, bcrypt, Zod, secure cookies, and Brevo email OTP verification.
+A Node.js, Express, and MongoDB authentication backend for projects that need email signup, OTP verification, login, password reset, and cookie-based sessions.
 
-Quick Node Auth helps developers get started with common authentication features without building everything from scratch.
+It uses JWTs stored in HTTP-only cookies, bcrypt password hashing, MongoDB through Mongoose, and Brevo for transactional OTP emails.
 
-> [!WARNING]
-> **Development status:** Some authentication flows still have known issues, including OTP resend, password-reset OTP delivery, login validation, and server startup. Review the [Known Issues](#-known-issues) section before using this project. It is not production-ready in its current state.
+## Features
 
-## ✨ Features
+- Username and email signup
+- Email OTP verification
+- Password login
+- HTTP-only JWT cookie sessions
+- Session validation with `GET /api/auth/me`
+- Protected users list
+- Forgot-password OTP flow
+- Password reset and logout
+- Zod input validation, Helmet security headers, and CORS support
 
-- User registration with username, email, and password
-- Password hashing with bcrypt
-- Email verification using OTP
-- OTP expiration and verification
-- JWT authentication with HTTP-only cookies
-- Logout and cookie clearing
-- Password-reset functionality using OTP
-- Request validation with Zod
-- Authentication middleware
-- Token version checking for session invalidation
-- HTTP security headers with Helmet
+## Requirements
 
-> Some features require fixes before they can be used reliably. See [Known Issues](#-known-issues).
-
-## 🛠️ Tech Stack
-
-| Technology | Purpose |
-|---|---|
-| Node.js | JavaScript runtime |
-| Express 5 | Backend framework |
-| MongoDB | Database |
-| Mongoose | Object data modeling |
-| JWT | Authentication |
-| bcrypt | Password and OTP hashing |
-| Zod | Request validation |
-| Helmet | HTTP security headers |
-| Brevo | Transactional email delivery |
-
-## 📁 Project Structure
-
-```text
-Quick_NODE_Auth/
-├── src/
-│   ├── controllers/
-│   │   └── auth.controller.js
-│   ├── db/
-│   │   ├── db.js
-│   │   └── models/
-│   │       └── userModel.js
-│   ├── middlewares/
-│   │   └── auth.middleware.js
-│   ├── routes/
-│   │   └── auth.routes.js
-│   ├── utils/
-│   │   └── sendOtp.js
-│   └── app.js
-├── .env.example
-├── .gitignore
-├── package.json
-├── package-lock.json
-└── server.js
-```
-
-## 🚀 Getting Started
-
-### Requirements
-
-- Node.js 20.19.0 or later
+- Node.js 20 or later
 - npm
-- MongoDB database
-- Brevo account with a verified sender
-- Git
+- MongoDB database or MongoDB Atlas cluster
+- Brevo account and API key for OTP email delivery
 
-### 1. Clone the repository
+## Installation
 
-```bash
-git clone https://github.com/avash755/Quick_NODE_Auth.git
+1. Clone this repository and open the backend folder:
 
-cd Quick_NODE_Auth
-```
+   ```bash
+   git clone <your-backend-repository-url>
+   cd signupLogin
+   ```
 
-### 2. Install dependencies
+2. Install all project dependencies:
 
-```bash
-npm install
-```
+   ```bash
+   npm install
+   ```
 
-### 3. Configure environment variables
+   This installs Express, Mongoose, bcrypt, JSON Web Token, Zod, Brevo, CORS, Helmet, cookie-parser, dotenv, and the other packages listed in `package.json`.
 
-Create a `.env` file in the project root.
+3. Create a `.env` file in the project root. Copy `.env.example` as a starting point, then use your own values:
 
-```env
-JWT_SECRET=your_long_random_secret
+   ```env
+   JWT_SECRET=replace-with-a-long-random-secret
+   MONGO_URI=mongodb+srv://<username>:<password>@<cluster>/<database>
+   BREVO_API_KEY=your-brevo-api-key
+   BREVO_SENDER_EMAIL=verified-sender@example.com
+   BREVO_SENDER_NAME=Reusable Collection
+   NODE_ENV=development
+   ```
 
-MONGO_URI=your_mongodb_connection_string
+4. Start the server:
 
-BREVO_API_KEY=your_brevo_api_key
-BREVO_SENDER_EMAIL=your_verified_sender_email
-BREVO_SENDER_NAME=Quick Node Auth
+   ```bash
+   npm run dev
+   ```
 
-NODE_ENV=development
-```
+   Or run it without Nodemon:
 
-**Configuration:**
+   ```bash
+   npm start
+   ```
 
-- `JWT_SECRET` — Secret used to sign JWTs.
-- `MONGO_URI` — Your MongoDB connection string.
-- `BREVO_API_KEY` — Your Brevo API key.
-- `BREVO_SENDER_EMAIL` — Verified sender email in Brevo.
-- `BREVO_SENDER_NAME` — Sender display name.
-- `NODE_ENV` — Application environment.
+5. The API starts at:
 
-Never commit your `.env` file or expose credentials in public repositories.
+   ```text
+   http://localhost:3000
+   ```
 
-### 4. Configure MongoDB
+## Environment variables
 
-You can use a local MongoDB database or [MongoDB Atlas](https://www.mongodb.com/atlas/database).
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `JWT_SECRET` | Yes | Signs and validates session tokens. Use a long, private random value. |
+| `MONGO_URI` | Yes | MongoDB connection string. |
+| `BREVO_API_KEY` | Yes | Sends OTP emails through Brevo. |
+| `BREVO_SENDER_EMAIL` | Yes | A sender address verified in Brevo. |
+| `BREVO_SENDER_NAME` | Yes | Name shown in the OTP email. |
+| `NODE_ENV` | Yes | Use `development` locally and `production` when deployed. |
 
-For Atlas:
+Never commit `.env`. It is already excluded by `.gitignore`.
 
-1. Create a cluster.
-2. Create a database user.
-3. Configure network access.
-4. Copy your connection string.
-5. Add it to `MONGO_URI`.
+## API routes
 
-[MongoDB Atlas Documentation](https://www.mongodb.com/docs/atlas/)
+Base path: `http://localhost:3000/api/auth`
 
-### 5. Configure Brevo
+| Method | Route | Body | Purpose |
+| --- | --- | --- | --- |
+| `POST` | `/signup` | `username`, `email`, `password` | Creates an unverified user and sends an OTP. |
+| `POST` | `/verify` | `otp` | Verifies the signed-in user’s OTP. Requires the session cookie. |
+| `POST` | `/resend-otp` | None | Sends another signup OTP for the signed-in user. |
+| `POST` | `/login` | `username` or `email`, `password` | Starts a session for a verified user. |
+| `POST` | `/sentOTP` | `email` | Sends a password-reset OTP. |
+| `POST` | `/forgot-password` | `email`, `otp`, `newPassword` | Resets a password with a valid OTP. |
+| `POST` | `/logout` | None | Clears the session cookie. |
+| `GET` | `/me` | None | Checks the current session. Requires the session cookie. |
+| `GET` | `/users` | None | Returns user IDs, usernames, emails, and creation dates. Requires the session cookie. |
 
-Brevo is used to deliver email verification OTPs.
-
-1. Create a [Brevo account](https://www.brevo.com/).
-2. Generate an API key.
-3. Register and verify a sender email.
-4. Add your credentials to `.env`.
-
-[Brevo API Documentation](https://developers.brevo.com/)
-
-### 6. Run the project
-
-```bash
-npm start
-```
-
-For development, the project currently uses `npx nodemon`, but `nodemon` is not declared as a dependency. Install it and update the development script before relying on it:
-
-```bash
-npm install --save-dev nodemon
-```
+### Signup example
 
 ```json
-"dev": "nodemon server.js"
+{
+  "username": "jane",
+  "email": "jane@example.com",
+  "password": "a-secure-password"
+}
 ```
 
-Then run:
+### Cookie-based authentication
 
-```bash
-npm run dev
+The API stores the JWT in an HTTP-only `token` cookie. A browser frontend must send requests with credentials enabled:
+
+```js
+axios.get("http://localhost:3000/api/auth/me", {
+  withCredentials: true
+});
 ```
 
-## 🔗 API Reference
+The frontend origin must also be listed in the CORS configuration in `src/app.js`. The current local setup permits `http://localhost:5173`.
 
-Base route:
+## Database model
+
+Each user has a unique `username` and `email`, a bcrypt password hash, verification status, OTP data, a token version, and automatic `createdAt`/`updatedAt` timestamps.
+
+## Project structure
 
 ```text
-/api/auth
+signupLogin/
+├── server.js
+├── .env.example
+└── src/
+    ├── app.js
+    ├── controllers/auth.controller.js
+    ├── db/
+    │   ├── db.js
+    │   └── models/userModel.js
+    ├── middlewares/auth.middleware.js
+    ├── routes/auth.routes.js
+    └── utils/sendOtp.js
 ```
 
-| Method | Endpoint | Purpose | Current Status |
-|---|---|---|---|
-| POST | `/signup` | Register a new user | Implemented; review required |
-| POST | `/verify` | Verify email OTP | Implemented; review required |
-| POST | `/resend-otp` | Resend verification OTP | Needs fixing |
-| POST | `/sentOTP` | Request password-reset OTP | Needs redesign |
-| POST | `/forgot-password` | Reset password | Needs validation and security fixes |
-| POST | `/login` | Authenticate a user | Needs validation fix |
-| POST | `/logout` | Clear authentication cookie | Implemented |
+## Open-source use and contributions
 
-### Example: Signup
+You may use this authentication starter in your own learning and projects. Before publishing a fork, add a license file that matches how you want others to reuse it.
 
-**POST** `/api/auth/signup`
+Issues and pull requests are welcome. Please do not include `.env` files, API keys, database credentials, or real user data in commits.
 
-```json
-{
-  "username": "demo_user",
-  "email": "you@example.com",
-  "password": "YourStrongPassword"
-}
-```
+## Roadmap
 
-### Example: Verify Email
-
-**POST** `/api/auth/verify`
-
-```json
-{
-  "otp": "1234567"
-}
-```
-
-The verification endpoint currently expects the authentication cookie created during signup.
-
-### Example: Login
-
-The current login controller expects both `username` and `email`. This is a known implementation issue and should be replaced with a single identifier field before publishing a stable API contract.
-
-### Example: Logout
-
-**POST** `/api/auth/logout`
-
-No request body is required.
-
-> Check the controller and route implementations for the exact request and response behavior. The API reference describes the current branch, not a guarantee that every endpoint is working.
-
-## 🔒 Security Considerations
-
-Authentication requires careful handling. Before deploying this project:
-
-- Keep secrets and credentials in environment variables.
-- Use HTTPS in production.
-- Keep authentication cookies `HttpOnly` and configure `Secure` and `SameSite` appropriately.
-- Add rate limiting to authentication endpoints.
-- Apply OTP attempt limits and resend cooldowns.
-- Validate and normalize user input.
-- Handle duplicate database records safely.
-- Configure CORS with trusted origins.
-- Consider CSRF protection for cookie-based authentication.
-- Never log passwords, OTPs, JWTs, or API keys.
-
-## ⚠️ Known Issues
-
-The following issues were identified in the current repository and should be addressed before a production release:
-
-1. **OTP resend:** The controller expects `req.user`, but the route does not attach authentication middleware.
-2. **Password-reset OTP:** The current route has the same authentication mismatch. Redesign it as a public email-based request.
-3. **Login validation:** The controller calls `.trim()` on both username and email. Use a single validated identifier instead.
-4. **Password reset:** Add Zod validation, OTP attempt limits, rate limiting, and OTP-purpose checks.
-5. **OTP consistency:** The generated OTP has seven digits, while the stored expiry and email message use different durations.
-6. **OTP attempts:** Fix the attempt-limit condition and make the limit safe against concurrent requests.
-7. **Signup authentication:** Do not treat an unverified signup session as a fully authenticated session.
-8. **Database startup:** Await the MongoDB connection before starting the server.
-9. **Port configuration:** Use `process.env.PORT || 3000` instead of a hard-coded port.
-10. **CORS and rate limiting:** Add appropriate configuration before using the API from a deployed frontend.
-11. **Environment example:** Ensure `.env.example` contains placeholders only.
-12. **Project metadata:** Clean up the package name, description, entry point, and development scripts.
-13. **Testing and license:** Add automated tests, CI, and the actual license file before publishing a stable release.
-
-## 🤝 Contributing
-
-Contributions and suggestions are welcome!
-
-1. Fork the repository.
-2. Create a feature branch.
-3. Make your changes.
-4. Test the affected functionality.
-5. Open a pull request with a clear description.
-
-Please avoid committing credentials, tokens, or personal information.
-
-## ⭐ Support
-
-If this project helps you understand authentication or saves you development time, consider giving it a **star** on GitHub.
-
-Your support helps other developers discover the project and encourages further improvements.
-
-**Repository:** [Quick Node Auth](https://github.com/avash755/Quick_NODE_Auth)
-
-## 📚 Useful Documentation
-
-- [Node.js](https://nodejs.org/docs/latest/api/)
-- [Express](https://expressjs.com/)
-- [MongoDB](https://www.mongodb.com/docs/)
-- [Mongoose](https://mongoosejs.com/docs/)
-- [JSON Web Tokens](https://jwt.io/)
-- [Zod](https://zod.dev/)
-- [Brevo API](https://developers.brevo.com/)
+I will continue improving this authentication system whenever I have free time, with the goal of making useful updates frequently rather than waiting for monthly releases.
